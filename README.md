@@ -30,7 +30,7 @@ Here are some constraints you must follow during coding
 
 You must perform **at least one** optimization for each each module and show the overall improvement achieved by your optimization in the experiments.
 
-If you follow the above rules and hand in your code along with your report in time, you will get at least 80% of scores. The rest of scores will be measured by how much you have done for optimization.
+If you follow the above rules correctly and hand in your code along with your report in time, you will get at least 60% of total scores. The rest of scores will be measured by how much you have done for optimization.
 
 ## Experiments
 
@@ -164,10 +164,10 @@ Maybe using a different replacement strategy in `BufferPoolMgr` results in bette
 
 ### Phase 1
 
-Submit your work before **2025/04/23 (Wed.) 23:59:59**.
+Submit your work before **2026/04/29 (Wed.) 23:59:59**.
 
 ### Phase 2
 
-Submit your work before **2025/04/30 (Wed.) 23:59:59**.
+Submit your work before **2026/05/06 (Wed.) 23:59:59**.
 
 Late submission will NOT be accepted.
