@@ -91,7 +91,15 @@ Some benchmarks will change the database (e.g., TPC-C). We recommend to back up 
 
 ## Phase 1 Report
 
-- Briefly explain what you exactly do for optimization
+- Explain what you exactly do for optimization, format as follow
+  - File optimization
+    - Optimization 1 and explanation 
+    - Optimization 2 and explanation 
+    - etc ....
+  - Buffer optimization
+    - Optimization 1 and explanation 
+    - Optimization 2 and explanation 
+    - etc ....
 - Experiments
   - Your experiment environment including (a list of your hardware components, the operating system)
     - e.g. Intel Core i5-3470 CPU @ 3.2GHz, 16 GB RAM, 128 GB SSD, CentOS 7
