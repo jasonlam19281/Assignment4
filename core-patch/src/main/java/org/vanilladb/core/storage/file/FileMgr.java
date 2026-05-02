@@ -121,15 +121,18 @@ public class FileMgr {
 	 * @param buffer
 	 *            the byte buffer
 	 */
-	synchronized void read(BlockId blk, IoBuffer buffer) {
+	void read(BlockId blk, IoBuffer buffer) {
 		try {
 			IoChannel fileChannel = getFileChannel(blk.fileName());
 
-			// clear the buffer
-			buffer.clear();
-
-			// read a block from file
-			fileChannel.read(buffer, blk.number() * BLOCK_SIZE);
+			synchronized(fileChannel){
+				// clear the buffer
+				buffer.clear();
+				// read a block from file
+				fileChannel.read(buffer, blk.number() * BLOCK_SIZE);
+			}
+			
+			
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new RuntimeException("cannot read block " + blk);
@@ -144,15 +147,18 @@ public class FileMgr {
 	 * @param buffer
 	 *            the byte buffer
 	 */
-	synchronized void write(BlockId blk, IoBuffer buffer) {
+	void write(BlockId blk, IoBuffer buffer) {
 		try {
 			IoChannel fileChannel = getFileChannel(blk.fileName());
 
-			// rewind the buffer
-			buffer.rewind();
+			synchronized(fileChannel){
+				// rewind the buffer
+				buffer.rewind();
 
-			// write the block to the file
-			fileChannel.write(buffer, blk.number() * BLOCK_SIZE);
+				// write the block to the file
+				fileChannel.write(buffer, blk.number() * BLOCK_SIZE);
+			}
+			
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new RuntimeException("cannot write block" + blk);
@@ -168,19 +174,20 @@ public class FileMgr {
 	 *            the byte buffer
 	 * @return a block ID refers to the newly-created block.
 	 */
-	synchronized BlockId append(String fileName, IoBuffer buffer) {
+	BlockId append(String fileName, IoBuffer buffer) {
 		try {
 			IoChannel fileChannel = getFileChannel(fileName);
 
+			synchronized(fileChannel){
+				buffer.rewind();
+
+				// Append the block to the file
+				long newSize = fileChannel.append(buffer);
+
+				// Return the new block id
+				return new BlockId(fileName, newSize / BLOCK_SIZE - 1);
+			}
 			// Rewind the buffer for writing
-			buffer.rewind();
-
-			// Append the block to the file
-			long newSize = fileChannel.append(buffer);
-
-			// Return the new block id
-			return new BlockId(fileName, newSize / BLOCK_SIZE - 1);
-
 		} catch (IOException e) {
 			e.printStackTrace();
 			return null;
@@ -257,13 +264,14 @@ public class FileMgr {
 	 * @param fileName
 	 *            the name of the target file
 	 */
-	public synchronized void delete(String fileName) {
+	public void delete(String fileName) {
 		try {
 			// Close file, if it was opened
 			IoChannel fileChannel = openFiles.remove(fileName);
-			if (fileChannel != null)
+			synchronized(fileChannel){
+				if (fileChannel != null)
 				fileChannel.close();
-
+			}
 			// Delete the file
 			boolean hasDeleted = new File(dbDirectory, fileName).delete();
 			if (!hasDeleted && logger.isLoggable(Level.WARNING))
