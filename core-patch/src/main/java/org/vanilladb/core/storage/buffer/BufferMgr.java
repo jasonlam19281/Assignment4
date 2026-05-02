@@ -109,16 +109,15 @@ public class BufferMgr implements TransactionLifecycleListener {
 	 * @return the buffer pinned to that block
 	 */
 	public Buffer pin(BlockId blk) {
-		//將找pinnedBuff移到上面
-		PinningBuffer pinnedBuff = pinningBuffers.get(blk);
-		if (pinnedBuff != null) {
-			pinnedBuff.pinCount++;
-			return pinnedBuff.buffer;
-		}
 
 		synchronized (bufferPool) {
 			// Try to find out if this block has been pinned by this transaction
-			/*
+			PinningBuffer pinnedBuff = pinningBuffers.get(blk);
+			if (pinnedBuff != null) {
+				pinnedBuff.pinCount++;
+				return pinnedBuff.buffer;
+			}
+			/* 
 			 * Throws BufferAbortException if the calling tx requires more buffers than the
 			 * size of buffer pool.
 			 */
@@ -139,7 +138,11 @@ public class BufferMgr implements TransactionLifecycleListener {
 					waitingThreads.add(Thread.currentThread());
 
 					while (buff == null && !waitingTooLong(timestamp)) {
-						bufferPool.wait(MAX_TIME);
+						//優化等待機制
+						long currentTime = System.currentTimeMillis();
+						long remaintime = MAX_TIME-(currentTime-timestamp);
+						if(remaintime<=0) break;
+						bufferPool.wait(remaintime);
 						if (waitingThreads.get(0).equals(Thread.currentThread()))
 							buff = bufferPool.pin(blk);
 					}
@@ -192,7 +195,11 @@ public class BufferMgr implements TransactionLifecycleListener {
 					waitingThreads.add(Thread.currentThread());
 
 					while (buff == null && !waitingTooLong(timestamp)) {
-						bufferPool.wait(MAX_TIME);
+						//優化等待機制
+						long currentTime = System.currentTimeMillis();
+						long remaintime = MAX_TIME-(currentTime-timestamp);
+						if(remaintime<=0) break;
+						bufferPool.wait(remaintime);
 						if (waitingThreads.get(0).equals(Thread.currentThread()))
 							buff = bufferPool.pinNew(fileName, fmtr);
 					}
