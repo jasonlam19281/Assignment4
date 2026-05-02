@@ -165,15 +165,32 @@ public class Buffer {
 	 * ensures that the corresponding log record has been written to disk prior
 	 * to writing the page to disk.
 	 */
-	synchronized void flush() {
+	void flush() {
 		flushLock.lock();
 		try {
-			if (isNew || modifiedBy.size() > 0) {
-				VanillaDb.logMgr().flush(lastLsn);
-				contents.write(blk);
-				modifiedBy.clear();
-				isNew = false;
+			LogSeqNum IsnNeedFlush=null;
+			BlockId BlkNeedFlush=null;
+			boolean needsWrite = false;
+
+			synchronized(this){
+				if (isNew || modifiedBy.size() > 0) {
+					needsWrite = true;
+					IsnNeedFlush = lastLsn;
+					BlkNeedFlush = blk;
+				}
 			}
+			if(needsWrite){
+				VanillaDb.logMgr().flush(IsnNeedFlush);
+				contents.write(BlkNeedFlush);
+
+				synchronized(this){
+					if (this.blk.equals(BlkNeedFlush)) {
+						modifiedBy.clear();
+						isNew = false;
+					}
+				}
+			}
+				
 		} finally {
 			flushLock.unlock();
 		}
