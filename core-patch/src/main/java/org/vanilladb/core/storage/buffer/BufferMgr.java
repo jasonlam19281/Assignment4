@@ -140,7 +140,7 @@ public class BufferMgr implements TransactionLifecycleListener {
 					while (buff == null && !waitingTooLong(timestamp)) {
 						//優化等待機制
 						long currentTime = System.currentTimeMillis();
-						long remaintime = MAX_TIME-(currentTime-timestamp);
+						long remaintime = MAX_TIME-(currentTime+EPSILON-timestamp);
 						if(remaintime<=0) break;
 						bufferPool.wait(remaintime);
 						if (waitingThreads.get(0).equals(Thread.currentThread()))
@@ -197,7 +197,7 @@ public class BufferMgr implements TransactionLifecycleListener {
 					while (buff == null && !waitingTooLong(timestamp)) {
 						//優化等待機制
 						long currentTime = System.currentTimeMillis();
-						long remaintime = MAX_TIME-(currentTime-timestamp);
+						long remaintime = MAX_TIME-(currentTime+EPSILON-timestamp);
 						if(remaintime<=0) break;
 						bufferPool.wait(remaintime);
 						if (waitingThreads.get(0).equals(Thread.currentThread()))
