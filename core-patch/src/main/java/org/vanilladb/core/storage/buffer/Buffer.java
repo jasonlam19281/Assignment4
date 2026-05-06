@@ -166,35 +166,39 @@ public class Buffer {
 	 * to writing the page to disk.
 	 */
 	void flush() {
+		LogSeqNum lsnToFlush = null;
+		BlockId blkToFlush = null;
+		
+		// 第一階段：喺鎖入面快速攞 snapshot 並標記「正在處理」
 		flushLock.lock();
 		try {
-			LogSeqNum IsnNeedFlush=null;
-			BlockId BlkNeedFlush=null;
-			boolean needsWrite = false;
-
-			synchronized(this){
-				if (isNew || modifiedBy.size() > 0) {
-					needsWrite = true;
-					IsnNeedFlush = lastLsn;
-					BlkNeedFlush = blk;
-				}
-			}
-			if(needsWrite){
-				VanillaDb.logMgr().flush(IsnNeedFlush);
-				contents.write(BlkNeedFlush);
-
-				synchronized(this){
-					if (this.blk.equals(BlkNeedFlush)) {
-						modifiedBy.clear();
-						isNew = false;
-					}
-				}
-			}
-				
+			if (!isNew && modifiedBy.isEmpty()) return;
+			
+			lsnToFlush = lastLsn;
+			blkToFlush = blk;
+			// 注意：呢度唔好即刻 clear modifiedBy，費事寫寫下 crash 咗救唔返
 		} finally {
 			flushLock.unlock();
 		}
-	}
+
+		// 第二階段：鎖外面做慢速 I/O
+		if (blkToFlush != null) {
+			VanillaDb.logMgr().flush(lsnToFlush);
+			contents.write(blkToFlush);
+			
+			// 第三階段：寫完之後再鎖返，清 dirty flag
+			flushLock.lock();
+			try {
+				// 檢查期間 blk 有冇被換走，冇就清咗佢
+				if (blkToFlush.equals(this.blk)) {
+					modifiedBy.clear();
+					isNew = false;
+				}
+			} finally {
+				flushLock.unlock();
+			}
+		}
+}
 
 	/**
 	 * Increases the buffer's pin count.
