@@ -165,19 +165,40 @@ public class Buffer {
 	 * ensures that the corresponding log record has been written to disk prior
 	 * to writing the page to disk.
 	 */
-	synchronized void flush() {
+	void flush() {
+		LogSeqNum lsnToFlush = null;
+		BlockId blkToFlush = null;
+		
+		// 第一階段：喺鎖入面快速攞 snapshot 並標記「正在處理」
 		flushLock.lock();
 		try {
-			if (isNew || modifiedBy.size() > 0) {
-				VanillaDb.logMgr().flush(lastLsn);
-				contents.write(blk);
-				modifiedBy.clear();
-				isNew = false;
-			}
+			if (!isNew && modifiedBy.isEmpty()) return;
+			
+			lsnToFlush = lastLsn;
+			blkToFlush = blk;
+			// 注意：呢度唔好即刻 clear modifiedBy，費事寫寫下 crash 咗救唔返
 		} finally {
 			flushLock.unlock();
 		}
-	}
+
+		// 第二階段：鎖外面做慢速 I/O
+		if (blkToFlush != null) {
+			VanillaDb.logMgr().flush(lsnToFlush);
+			contents.write(blkToFlush);
+			
+			// 第三階段：寫完之後再鎖返，清 dirty flag
+			flushLock.lock();
+			try {
+				// 檢查期間 blk 有冇被換走，冇就清咗佢
+				if (blkToFlush.equals(this.blk)) {
+					modifiedBy.clear();
+					isNew = false;
+				}
+			} finally {
+				flushLock.unlock();
+			}
+		}
+}
 
 	/**
 	 * Increases the buffer's pin count.
